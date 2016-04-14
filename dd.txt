@@ -1,0 +1,112 @@
+Description: We are going to write a simple firewall that will filter the 
+incoming and outcoming traffic based on the rules specified by user.
+
+Firewall will be managed from the user space using binary called "minifw".
+Following commands can be executed to operate the firewall:
+
+"minifw run"  	   will run the firewall
+"minifw exit" 	   will exit the firewall
+"minifw addrule"   add new rule
+"minifw ls"   	   prints all the rules
+ 
+minifw run
+This command will plug in the module fwmod.ko inside the kernel. 
+The module has functions required to process network packets. 
+Upon the load, the module will be filled with all the rules from 
+local file "fwrules.txt". The file will consist of rules, separated 
+by a new line.
+
+The user will be able to add and remove rules from "fwrules.txt" file  
+by editing it. 
+
+minifw exit
+The cmmand will pull all the rules from the kernel and will output them
+to the local file "fwrules.txt". After all the rules are saved, another
+process will unload the fwmod module from the kernel, and that will turn 
+the firewall off. 
+
+minifw addrule
+The command can only be executed when firewall runs. It will load the 
+rule inside the fwmod enabling the module to check all packets against
+given rule.
+The rule is written to "/proc/fwb" file and then placed inside the 
+linked list of policies that are stored inside the kernel.
+
+Rule structure will be as following
+<action> <in/out> <protocol> <src_ip> <src_netmask> <src_port> <dest_ip> <dest_netmask> <dest_port> 
+
+For example:
+
+BLOCK IN ALL NULL NULL NULL NULL NULL NULL 
+will block all the incoming and outcoming traffic (both tcp and udp)
+
+BLOCK IN TCP 137.132.165.27 255.255.255.255 NULL NULL NULL NULL
+will block incoming tcp traffic from given ip address with given netmask
+
+
+miniwf ls
+The command will list all the rules that had beed added to the firewall.
+
+Since the "fwrules.txt" is just a text file, the user can add or remove
+rules by simply editing the file.
+
+
+/****************************************************************************
+
+Info about module:
+
+sudo insmod fwmod.ko 		loads the module to the kernel
+sudo rmmod fwmod		removes the module from the kernel
+dmesg /var/log/messages
+display the log of all the modules
+dmesg | tail -50		display last 50 lines of the log file
+
+Example of commands:
+0      1       2     3  4   5    6    7    8    9    10
+minifw ADDRULE BLOCK IN ALL NULL NULL NULL NULL NULL NULL 
+0      1       2     3  4   5              6               7    8    9    10
+minifw ADDRULE BLOCK IN TCP 137.132.165.27 255.255.255.255 NULL NULL NULL NULL
+
+
+
+/*structure for firewall policies to place in the linked list*/
+struct rule_list_item {
+  unsigned char action;		//0: for block, 1: for unblock
+  unsigned char in_out; 	//0: neither in nor out, 1: in, 2: out
+  unsigned char proto;        	//0: all, 1: tcp, 2: udp
+  unsigned int src_ip;        	//
+  unsigned int src_netmask;     //
+  unsigned int src_port;        //0~2^32
+  unsigned int dest_ip;
+  unsigned int dest_netmask;
+  unsigned int dest_port;
+  struct list_head list;
+};
+
+ip for facebook:
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 173.252.110.27 NULL NULL
+
+ip for google:
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 173.194.33.32 NULL NULL
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 173.194.33.33 NULL NULL
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 173.194.33.34 NULL NULL
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 173.194.33.35 NULL NULL
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 173.194.33.36 NULL NULL
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 173.194.33.37 NULL NULL
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 173.194.33.38 NULL NULL
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 173.194.33.39 NULL NULL
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 173.194.33.40 NULL NULL
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 173.194.33.41 NULL NULL
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 173.194.33.46 NULL NULL
+
+
+ip for amazon:
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 72.21.194.212 NULL NULL
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 72.21.215.232 NULL NULL
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 176.32.98.166 NULL NULL
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 205.251.242.54 NULL NULL
+
+ip for penguin.ewu:
+./minifw ADDRULE BLOCK OUT TCP NULL NULL NULL 146.187.134.27 NULL NULL
+
+
